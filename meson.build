@@ -930,7 +930,6 @@ if want_install_init
     subdir('config/init/common')
     subdir('config/init/systemd')
     subdir('config/init/sysvinit')
-    subdir('config/init/monitd')
     subdir('config/init/module')
     subdir('config/sysconfig')
 endif

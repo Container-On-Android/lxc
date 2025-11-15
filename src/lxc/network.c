@@ -43,6 +43,11 @@
 #include "strlcpy.h"
 #endif
 
+#if IS_BIONIC
+#include <ifaddrs.h>
+#define RT_TABLE_ANDROID_BASE 1000
+#endif
+
 lxc_log_define(network, lxc);
 
 typedef int (*netdev_configure_server_cb)(struct lxc_handler *, struct lxc_netdev *);
@@ -188,6 +193,129 @@ static int lxc_ipv6_dest_del(int ifindex, struct in6_addr *dest, unsigned int ne
 {
 	return lxc_ip_route_dest(RTM_DELROUTE, AF_INET6, ifindex, dest, netmask);
 }
+
+#if IS_BIONIC
+static int lxc_ip_rule_entry(int family, void *src, unsigned int src_len, 
+							void *dst, unsigned int dst_len, 
+							uint32_t table, uint32_t fwmark, uint32_t fwmask,
+							uint32_t priority, uint8_t type)
+{
+	call_cleaner(nlmsg_free) struct nlmsg *answer = NULL, *nlmsg = NULL;
+	struct nl_handler nlh = NL_HANDLER_INIT;
+	call_cleaner(netlink_close) struct nl_handler *nlh_ptr = &nlh;
+	int addrlen, err;
+	struct rtmsg *rt;
+
+	addrlen = family == AF_INET ? sizeof(struct in_addr)
+				    : sizeof(struct in6_addr);
+
+	err = netlink_open(nlh_ptr, NETLINK_ROUTE);
+	if (err)
+		return err;
+
+	nlmsg = nlmsg_alloc(NLMSG_GOOD_SIZE);
+	if (!nlmsg)
+		return -ENOMEM;
+
+	answer = nlmsg_alloc_reserve(NLMSG_GOOD_SIZE);
+	if (!answer)
+		return -ENOMEM;
+
+	nlmsg->nlmsghdr->nlmsg_flags = NLM_F_ACK | NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL;
+	nlmsg->nlmsghdr->nlmsg_type = RTM_NEWRULE;
+
+	rt = nlmsg_reserve(nlmsg, sizeof(struct rtmsg));
+	if (!rt)
+		return -ENOMEM;
+
+	rt->rtm_family = family;
+	rt->rtm_table = RT_TABLE_UNSPEC;
+	rt->rtm_protocol = RTPROT_BOOT;
+	rt->rtm_scope = RT_SCOPE_UNIVERSE;
+	rt->rtm_type = RTN_UNICAST;
+	rt->rtm_src_len = src_len;
+	rt->rtm_dst_len = dst_len;
+	rt->rtm_tos = 0;
+
+	if (src && src_len > 0) {
+		if (nla_put_buffer(nlmsg, RTA_SRC, src, addrlen))
+			return -EINVAL;
+	}
+
+	if (dst && dst_len > 0) {
+		if (nla_put_buffer(nlmsg, RTA_DST, dst, addrlen))
+			return -EINVAL;
+	}
+
+	if (table != 0) {
+		if (nla_put_u32(nlmsg, RTA_TABLE, table))
+			return -EINVAL;
+	}
+
+	if (fwmark != 0) {
+		if (nla_put_u32(nlmsg, RTA_MARK, fwmark))
+			return -EINVAL;
+	}
+
+	if (priority != 0) {
+		if (nla_put_u32(nlmsg, RTA_PRIORITY, priority))
+			return -EINVAL;
+	}
+
+	err = netlink_transaction(nlh_ptr, nlmsg, answer);
+
+	if (err == -EEXIST)
+		return 0;
+
+	return err;
+}
+
+static int lxc_ipv4_entry_add(uint32_t table, uint32_t priority)
+{
+	return lxc_ip_rule_entry(AF_INET, NULL, 0, NULL, 0, table, 0, 0, priority, RTN_UNICAST);
+}
+
+static int lxc_ipv6_entry_add(uint32_t table, uint32_t priority)
+{
+	return lxc_ip_rule_entry(AF_INET6, NULL, 0, NULL, 0, table, 0, 0, priority, RTN_UNICAST);
+}
+
+static int setup_host_route_rules(void)
+{
+	struct ifaddrs *ifaddr = NULL, *ifa;
+	int tables[] = {RT_TABLE_MAIN, RT_TABLE_DEFAULT};
+	int ret = 0;
+	unsigned ifindex = 0;
+
+	if (getifaddrs(&ifaddr) == -1)
+		return -1;
+
+	for (int i = 0; i < 2; i++) {
+		if ((ret = lxc_ipv4_entry_add(tables[i], 100 + i)) ||
+			(ret = lxc_ipv6_entry_add(tables[i], 100 + i))) {
+			log_error_errno(-1, -EINVAL, "Failed to setup rules for table %d", tables[i]);
+			goto out;
+		}
+	}
+
+	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+		if (!ifa->ifa_name || !(ifa->ifa_flags & IFF_UP)) 
+			continue;
+
+		ifindex = if_nametoindex(ifa->ifa_name);
+		if (ifindex > 0) {
+			if ((ret = lxc_ipv4_entry_add(RT_TABLE_ANDROID_BASE + ifindex, 102)) ||
+				(ret = lxc_ipv6_entry_add(RT_TABLE_ANDROID_BASE + ifindex, 102)))
+				goto out;
+		}
+	}
+
+out:
+	if (ifaddr)
+		freeifaddrs(ifaddr);
+	return ret;
+}
+#endif /* IS_BIONIC */
 
 static int setup_ipv4_routes(struct lxc_netdev *netdev)
 {
@@ -781,6 +909,16 @@ static int netdev_configure_server_veth(struct lxc_handler *handler, struct lxc_
 		ERROR("Failed to setup ipv6 routes for network device \"%s\"", veth1);
 		goto out_delete;
 	}
+
+#if IS_BIONIC
+	/* setup ip rules on the host tables */
+	if (setup_host_route_rules()) {
+		ERROR("Failed to setup host rules for network device \"%s\"", veth1);
+		goto out_delete;
+	}
+
+	DEBUG("Added route rules for all UP netdev");
+#endif
 
 	if (netdev->priv.veth_attr.mode == VETH_MODE_ROUTER) {
 		/* sleep for a short period of time to work around a bug that intermittently prevents IP neighbour

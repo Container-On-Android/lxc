@@ -1,4 +1,0 @@
-check program lxc-containers with path "@LIBEXECDIR@/lxc/lxc-containers start"
-    start program = "@LIBEXECDIR@/lxc/lxc-containers start"
-    stop program = "@LIBEXECDIR@/lxc/lxc-containers stop"
-    if status != 0 then alert

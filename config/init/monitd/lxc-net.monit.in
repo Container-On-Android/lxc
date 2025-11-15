@@ -1,4 +1,0 @@
-check program lxc-net with path "@LXCHOOKDIR@/android-network"
-    start program = "@LIBEXECDIR@/lxc/lxc-net start"
-    stop program = "@LIBEXECDIR@/lxc/lxc-net stop"
-    if status != 0 then alert

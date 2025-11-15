@@ -5,8 +5,3 @@ export LD_LIBRARY_PATH=/system/lib64:/system/lib:@LIBDIR@:/data/sysroot/lib64:/d
 # lxc-autostart
 mkdir -p @LOCALSTATEDIR@/lock
 @LIBEXECDIR@/lxc/lxc-containers start
-
-while true do
-    @LXCHOOKDIR@/android-network
-    sleep 5
-done

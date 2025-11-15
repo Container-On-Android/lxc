@@ -1,2 +1,0 @@
-#!/bin/sh
-LD_LIBRARY_PATH=/data/env/lib:/data/env/lib64:/data/lxc/lib @LIBEXECDIR@/lxc/lxc-monitord --daemon &

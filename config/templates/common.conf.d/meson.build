@@ -6,10 +6,3 @@ lxc_conf_common_readme = configure_file(
     output: 'README',
     install: true,
     install_dir: lxctemplateconfcommondir)
-
-lxc_conf_common_readme = configure_file(
-    configuration: conf,
-    input: '00-android-network.conf.in',
-    output: '00-android-network.conf',
-    install: true,
-    install_dir: lxctemplateconfcommondir)

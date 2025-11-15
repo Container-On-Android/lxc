@@ -15,18 +15,13 @@ option('examples', type: 'boolean', value: true,
 
 # was --init-script in autotools
 option('init-script', type: 'array',
-       choices: ['systemd', 'sysvinit', 'monitd', 'module'], value: ['module'],
+       choices: ['systemd', 'sysvinit', 'module'], value: ['module'],
        description: 'init script')
 
 # was --systemd-unidir in autotools
 # If set to "", the value is taken from the running systemd instance.
 option('systemd-unitdir', type: 'string', value: '',
        description: 'systemd system unit directory')
-
-# was --monitd-unidir in autotools
-# If set to "", the value is taken from the Magisk modules dir.
-option('monitd-unitdir', type: 'string', value: '',
-       description: 'monitd unit directory')
 
 # was --{disable,enable}-liburing in autotools
 option('io-uring-event-loop', type: 'boolean', value: false,
