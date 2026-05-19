@@ -309,7 +309,7 @@ static int toss_list(struct lxc_list *c_groups_list)
 int __attribute__((weak, alias("lxc_autostart_main"))) main(int argc, char *argv[]);
 int lxc_autostart_main(int argc, char *argv[])
 {
-	int count = 0, failed = 0, i = 0, ret = 0;
+	int count = 0, failed = 0, attempted = 0, i = 0, ret = 0;
 	struct lxc_list *cmd_group;
 	struct lxc_container **containers = NULL;
 	struct lxc_list **c_groups_lists = NULL;
@@ -408,6 +408,7 @@ int lxc_autostart_main(int argc, char *argv[])
 			}
 
 			/* We have a candidate container to process */
+			attempted++;
 			c->want_daemonize(c, 1);
 
 			if (my_args.shutdown) {
@@ -506,7 +507,7 @@ int lxc_autostart_main(int argc, char *argv[])
 	toss_list(cmd_groups_list);
 	free(containers);
 
-	if (failed > 0 && failed == count)
+	if (failed > 0 && failed == attempted)
 		exit(EXIT_FAILURE);	/* Total failure */
 	else if (failed > 0)
 		exit(2);	/* Partial failure */
