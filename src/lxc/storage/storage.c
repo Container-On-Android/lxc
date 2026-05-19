@@ -296,12 +296,13 @@ bool storage_can_backup(struct lxc_conf *conf)
 /* If we're not snapshotting, then storage_copy becomes a simple case of mount
  * the original, mount the new, and rsync the contents.
  */
-struct lxc_storage *storage_copy(struct lxc_container *c, const char *cname,
-				 const char *lxcpath, const char *bdevtype,
-				 int flags, const char *bdevdata,
-				 uint64_t newsize, bool *needs_rdep)
+char *storage_copy(struct lxc_container *c, const char *cname,
+		   const char *lxcpath, const char *bdevtype,
+		   int flags, const char *bdevdata,
+		   uint64_t newsize, bool *needs_rdep)
 {
 	int ret;
+	char *ret_str;
 	const char *src_no_prefix;
 	struct lxc_storage *new, *orig;
 	bool snap = (flags & LXC_CLONE_SNAPSHOT);
@@ -520,7 +521,9 @@ on_success:
 	close_prot_errno_disarm(new_rootfs.dfd_idmapped);
 	lxc_storage_put(c->lxc_conf);
 
-	return new;
+	ret_str = must_copy_string(new->src);
+	storage_put(new);
+	return ret_str;
 
 on_error_put_new:
 	storage_put(new);

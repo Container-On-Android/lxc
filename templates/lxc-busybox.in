@@ -42,33 +42,33 @@ install_busybox()
   rootfs="${1}"
   name="${2}"
   res=0
-  fstree="\
-${rootfs}/selinux \
-${rootfs}/dev \
-${rootfs}/home \
-${rootfs}/root \
-${rootfs}/etc \
-${rootfs}/etc/init.d \
-${rootfs}/bin \
-${rootfs}/usr/bin \
-${rootfs}/sbin \
-${rootfs}/usr/sbin \
-${rootfs}/proc \
-${rootfs}/sys \
-${rootfs}/mnt \
-${rootfs}/tmp \
-${rootfs}/var/log \
-${rootfs}/var/run \
-${rootfs}/dev/pts \
-${rootfs}/lib \
-${rootfs}/usr/lib \
-${rootfs}/lib64 \
-${rootfs}/usr/lib64"
 
-  # shellcheck disable=SC2086
-  mkdir -p ${fstree} || return 1
-  # shellcheck disable=SC2086
-  chmod 755 ${fstree} || return 1
+  for d in \
+    selinux \
+    dev \
+    home \
+    root \
+    etc \
+    etc/init.d \
+    bin \
+    usr/bin \
+    sbin \
+    usr/sbin \
+    proc \
+    sys \
+    mnt \
+    tmp \
+    var/log \
+    var/run \
+    dev/pts \
+    lib \
+    usr/lib \
+    lib64 \
+    usr/lib64
+  do
+    mkdir -p "${rootfs}/$d" || return 1
+    chmod 755 "${rootfs}/$d" || return 1
+  done
 
   # make /tmp accessible to any user (with sticky bit)
   chmod 1777 "${rootfs}/tmp" || return 1
@@ -107,10 +107,10 @@ EOF
   # Look for the pathname of "default.script" from the help of udhcpc
   DEF_SCRIPT=$(${BUSYBOX_EXE} udhcpc --help 2>&1 | egrep -- '-s.*Run PROG' | cut -d'/' -f2- | cut -d')' -f1)
   DEF_SCRIPT_DIR=$(dirname /${DEF_SCRIPT})
-  mkdir -p ${rootfs}/${DEF_SCRIPT_DIR}
-  chmod 644 ${rootfs}/${DEF_SCRIPT_DIR} || return 1
+  mkdir -p "${rootfs}/${DEF_SCRIPT_DIR}"
+  chmod 644 "${rootfs}/${DEF_SCRIPT_DIR}" || return 1
 
-  cat <<EOF >> ${rootfs}/${DEF_SCRIPT}
+  cat <<EOF >> "${rootfs}/${DEF_SCRIPT}"
 #!/bin/sh
 case "\$1" in
   deconfig)
@@ -147,7 +147,7 @@ esac
 exit 0
 EOF
 
- chmod 744 ${rootfs}/${DEF_SCRIPT}
+ chmod 744 "${rootfs}/${DEF_SCRIPT}"
 
  return "${res}"
 }
@@ -193,7 +193,7 @@ grep -q "^lxc.rootfs.path" "${path}/config" 2>/dev/null || echo "lxc.rootfs.path
 cat <<EOF >> "${path}/config"
 lxc.signal.halt = SIGUSR1
 lxc.signal.reboot = SIGTERM
-lxc.uts.name = "${name}"
+lxc.uts.name = ${name}
 lxc.autodev = 1
 lxc.tty.max = 5
 lxc.pty.max = 1
@@ -275,12 +275,12 @@ while true
 do
   case "$1" in
     -h|--help)    usage && exit 0;;
-    -n|--name)    name=$2; shift 2;;
-    -p|--path)    path=$2; shift 2;;
-    --rootfs)     rootfs=$2; shift 2;;
-    --mapped-uid) LXC_MAPPED_UID=$2; shift 2;;
-    --mapped-gid) LXC_MAPPED_GID=$2; shift 2;;
-    --busybox-path) BUSYBOX_EXE=$2; shift 2;;
+    -n|--name)    name="$2"; shift 2;;
+    -p|--path)    path="$2"; shift 2;;
+    --rootfs)     rootfs="$2"; shift 2;;
+    --mapped-uid) LXC_MAPPED_UID="$2"; shift 2;;
+    --mapped-gid) LXC_MAPPED_GID="$2"; shift 2;;
+    --busybox-path) BUSYBOX_EXE="$2"; shift 2;;
     --)           shift 1; break ;;
     *)            break ;;
   esac

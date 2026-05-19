@@ -103,10 +103,10 @@ struct lxc_storage {
 __hidden extern bool storage_lxc_is_dir(struct lxc_conf *conf);
 __hidden extern bool storage_can_backup(struct lxc_conf *conf);
 __hidden extern struct lxc_storage *storage_init(struct lxc_conf *conf);
-__hidden extern struct lxc_storage *storage_copy(struct lxc_container *c, const char *cname,
-						 const char *lxcpath, const char *bdevtype,
-						 int flags, const char *bdevdata, uint64_t newsize,
-						 bool *needs_rdep);
+__hidden extern char *storage_copy(struct lxc_container *c, const char *cname,
+				   const char *lxcpath, const char *bdevtype,
+				   int flags, const char *bdevdata, uint64_t newsize,
+				   bool *needs_rdep);
 __hidden extern struct lxc_storage *storage_create(const char *dest, const char *type,
 						   const char *cname, struct bdev_specs *specs,
 						   const struct lxc_conf *conf);
