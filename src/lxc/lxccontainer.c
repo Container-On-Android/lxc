@@ -3533,23 +3533,22 @@ static int copy_storage(struct lxc_container *c0, struct lxc_container *c,
 			const char *newtype, int flags, const char *bdevdata,
 			uint64_t newsize)
 {
-	struct lxc_storage *bdev;
+	char *bdev_src = NULL;
 	bool need_rdep;
 
 	if (should_default_to_snapshot(c0, c))
 		flags |= LXC_CLONE_SNAPSHOT;
 
-	bdev = storage_copy(c0, c->name, c->config_path, newtype, flags,
+	bdev_src = storage_copy(c0, c->name, c->config_path, newtype, flags,
 			    bdevdata, newsize, &need_rdep);
-	if (!bdev) {
+	if (!bdev_src) {
 		ERROR("Error copying storage.");
 		return -1;
 	}
 
 	/* Set new rootfs. */
 	free(c->lxc_conf->rootfs.path);
-	c->lxc_conf->rootfs.path = strdup(bdev->src);
-	storage_put(bdev);
+	c->lxc_conf->rootfs.path = bdev_src;
 
 	if (!c->lxc_conf->rootfs.path) {
 		ERROR("Out of memory while setting storage path.");

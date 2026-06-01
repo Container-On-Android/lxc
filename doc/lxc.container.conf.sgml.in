@@ -953,9 +953,7 @@
               Note that in contrast to the on-disk ringbuffer logfile this file
               will keep growing potentially filling up the users disks if not
               rotated and deleted. This problem can also be avoided by using the
-              in-memory ringbuffer options
-              <option>lxc.console.buffer.size</option> and
-              <option>lxc.console.buffer.logfile</option>.
+              in-memory ringbuffer option <option>lxc.console.buffer.size</option>.
             </para>
           </listitem>
         </varlistentry>
@@ -974,8 +972,7 @@
               Users wishing to prevent the console log file from filling the
               disk should rotate the logfile and delete it if unneeded. This
               problem can also be avoided by using the in-memory ringbuffer
-              options <option>lxc.console.buffer.size</option> and
-              <option>lxc.console.buffer.logfile</option>.
+              option <option>lxc.console.buffer.size</option>.
             </para>
           </listitem>
         </varlistentry>

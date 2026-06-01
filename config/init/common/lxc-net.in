@@ -23,10 +23,11 @@ LXC_IPV4_DNS1="8.8.8.8"
 LXC_IPV4_DNS2="8.8.4.4"
 
 # IPv6 connectivity
+LXC_IPV6_PREFIX=$( (echo LXC_IPV6_PREFIX; cat /etc/machine-id 2>/dev/null) | sha256sum | sed -e 's/^\(..\)\(....\)\(....\)\(....\).*/fd\1:\2:\3:\4/')
 LXC_IPV6_ENABLE="true"
-LXC_IPV6_ADDR="fc42:5009:ba4b:5ab0::1"
+LXC_IPV6_ADDR="${LXC_IPV6_PREFIX}::1"
 LXC_IPV6_MASK="64"
-LXC_IPV6_NETWORK="fc42:5009:ba4b:5ab0::/64"
+LXC_IPV6_NETWORK="${LXC_IPV6_PREFIX}::/${LXC_IPV6_MASK}"
 LXC_IPV6_NAT="true"
 LXC_IPV6_DNS1="2001:4860:4860::8888"
 LXC_IPV6_DNS2="2001:4860:4860::8844"

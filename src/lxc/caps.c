@@ -88,7 +88,7 @@ int lxc_caps_up(void)
 int lxc_ambient_caps_up(void)
 {
 	call_cleaner(cap_free) cap_t caps = NULL;
-	__do_free char *cap_names = NULL;
+	char *cap_names = NULL;
 	int ret;
 	cap_value_t cap;
 	cap_value_t last_cap = CAP_LAST_CAP;
@@ -135,6 +135,7 @@ int lxc_ambient_caps_up(void)
 		return log_warn_errno(0, errno, "Failed to convert capabilities %d", cap);
 
 	TRACE("Raised %s in inheritable and ambient capability set", cap_names);
+	cap_free(cap_names);
 	return 0;
 }
 

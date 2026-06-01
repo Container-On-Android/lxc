@@ -321,6 +321,9 @@ if want_io_uring
     if cc.has_function('io_uring_prep_poll_add', prefix: '#include <liburing.h>', dependencies: liburing) == false
         error('liburing version does not support IORING_POLL_ADD_MULTI')
     endif
+    if cc.has_function('io_uring_set_iowait', prefix: '#include <liburing.h>', dependencies: liburing)
+        srcconf.set10('HAVE_LIBURING_SET_IOWAIT', true)
+    endif
     pkgconfig_libs += liburing
     liblxc_dependencies += liburing
 

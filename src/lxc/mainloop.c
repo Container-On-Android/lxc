@@ -138,6 +138,18 @@ static inline int __io_uring_open(struct lxc_async_descr *descr)
 		goto on_error;
 	}
 
+#if HAVE_LIBURING_SET_IOWAIT
+	/*
+	 * By default, when we enter uring to wait for CQs, kernel will
+	 * set current->in_iowait to 1. This behavior is not always
+	 * desirable. In our case we use io_uring for POLL-ing, and setting
+	 * current->in_iowait makes no sense and increases IOWait counters
+	 * and can make a system administrator nervous (see issue #4364).
+	 */
+	if (io_uring_set_iowait(descr->ring, 0))
+		TRACE("io_uring_set_iowait is not supported by the kernel");
+#endif
+
 	descr->type = LXC_MAINLOOP_IO_URING;
 	TRACE("Created io-uring instance");
 	return 0;
