@@ -288,7 +288,7 @@ static int exec_criu(struct cgroup_ops *cgroup_ops, struct lxc_conf *conf,
 	DECLARE_ARG(log);
 
 	for (int i = 0; i < cgroup_ops->criu_num_hierarchies(cgroup_ops); i++) {
-		__do_free char *cgroup_base_path = NULL, *controllers;
+		__do_free char *cgroup_base_path = NULL, *controllers = NULL;
 		char **controllers_list = NULL;
 		char *tmp;
 
@@ -938,6 +938,21 @@ static void do_restore(struct lxc_container *c, int status_pipe, struct migrate_
 		ERROR("Failed creating cgroups");
 		goto out_fini_handler;
 	}
+
+	if (!cgroup_ops->payload_delegate_controllers(cgroup_ops)) {
+		ERROR("Failed to delegate controllers to payload cgroup");
+		goto out_fini_handler;
+	}
+
+	if (!cgroup_ops->setup_limits(cgroup_ops, handler)) {
+		ERROR("Failed to setup cgroup limits");
+		goto out_fini_handler;
+	}
+
+	if (!cgroup_ops->chown(cgroup_ops, handler->conf))
+		goto out_fini_handler;
+
+	cgroup_ops->finalize(cgroup_ops);
 
 	if (!restore_net_info(c)) {
 		ERROR("failed restoring network info");

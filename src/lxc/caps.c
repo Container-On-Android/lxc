@@ -323,4 +323,46 @@ bool lxc_proc_cap_is_set(cap_value_t cap, cap_flag_t flag)
 
 	return lxc_cap_is_set(caps, cap, flag);
 }
+
+int lxc_bounding_as_ambient_caps(void)
+{
+	call_cleaner(cap_free) cap_t caps = NULL;
+	int ret;
+	cap_value_t cap;
+
+	caps = cap_get_proc();
+	if (!caps)
+		return log_error_errno(-1, errno, "Failed to retrieve capabilities");
+
+	for (cap = 0; cap <= CAP_LAST_CAP; cap++) {
+		if (cap_get_bound(cap) <= 0)
+			continue;
+
+		ret = cap_set_flag(caps, CAP_PERMITTED, 1, &cap, CAP_SET);
+		if (ret < 0) {
+			return log_error_errno(ret, errno, "Failed to set cap %d as permitted", cap);
+		}
+		ret = cap_set_flag(caps, CAP_INHERITABLE, 1, &cap, CAP_SET);
+		if (ret < 0) {
+			return log_error_errno(ret, errno, "Failed to set cap %d as inheritable", cap);
+		}
+
+		ret = cap_set_proc(caps);
+		if (ret < 0)
+			return log_error_errno(ret, errno, "Failed to set capabilities");
+
+		cap_set_ambient(cap, CAP_SET);
+	}
+
+	return 0;
+}
+
+int lxc_set_keepcaps(void) {
+	int ret = prctl(PR_SET_KEEPCAPS, prctl_arg(1));
+	if (ret < 0)
+		return log_error_errno(ret, errno, "Failed to set PR_SET_KEEPCAPS");
+
+	return ret;
+}
+
 #endif

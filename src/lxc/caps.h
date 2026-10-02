@@ -21,6 +21,8 @@ __hidden extern int lxc_caps_init(void);
 __hidden extern int lxc_caps_last_cap(__u32 *cap);
 __hidden extern bool lxc_proc_cap_is_set(cap_value_t cap, cap_flag_t flag);
 __hidden extern bool lxc_file_cap_is_set(const char *path, cap_value_t cap, cap_flag_t flag);
+__hidden extern int lxc_bounding_as_ambient_caps(void);
+__hidden extern int lxc_set_keepcaps(void);
 #else
 static inline int lxc_caps_down(void)
 {
@@ -64,6 +66,17 @@ static inline bool lxc_file_cap_is_set(const char *path, cap_value_t cap,
 {
 	return false;
 }
+
+static inline int lxc_bounding_as_ambient_caps(void)
+{
+	return 0;
+}
+
+static inline int lxc_set_keepcaps(void)
+{
+	return 0;
+}
+
 #endif
 
 #define lxc_priv(__lxc_function)                          \

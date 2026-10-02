@@ -2069,27 +2069,20 @@
         explanation of the differences between the two versions.
           -->
         カーネルにおける cgroup 実装は長年にわたって大きく変化してきました。
-        Linux 4.5 で新しい cgroup ファイルシステムのサポートが追加されました。通常は "cgroup2" や "unified hierarchy"（単一階層構造） と呼ばれています。
-        それ以来、通常は古い cgroup ファイルシステムは "cgroup1" や "legacy hierarchies"（レガシー階層構造）と呼ばれています。
+        Linux 4.5 で新しい cgroup ファイルシステムのサポートが追加されました。通常は "cgroup v2" や "unified hierarchy"（単一階層構造） と呼ばれています。
+        それ以来、通常は古い cgroup ファイルシステムは "cgroup v1" や "legacy hierarchies"（レガシー階層構造）と呼ばれています。
         この 2 つのバージョンの違いについての詳細な説明は、cgroup のマニュアルページをご覧ください。
       </para>
 
       <para>
         <!--
-        LXC distinguishes settings for the legacy and the unified hierarchy by
-        using different configuration key prefixes. To alter settings for
-        controllers in a legacy hierarchy the key prefix
-        <option>lxc.cgroup.</option> must be used and in order to alter the
-        settings for a controller in the unified hierarchy the
-        <option>lxc.cgroup2.</option> key must be used. Note that LXC will
-        ignore <option>lxc.cgroup.</option> settings on systems that only use
-        the unified hierarchy. Conversely, it will ignore
-        <option>lxc.cgroup2.</option> options on systems that only use legacy
-        hierarchies.
-        -->
-        LXC は cgroup1（レガシー階層構造）と cgroup2（単一階層構造）に対する設定を、異なる設定プレフィックスを使って区別しています。
-        cgroup1 に対する設定を変更するには <option>lxc.cgroup.</option> というプレフィックスを使う必要があり、cgroup2 の設定を変更するには <option>lxc.cgroup2.</option> を使う必要があります。
-        LXC は、cgroup2 だけが使われているシステム上の <option>lxc.cgroup.</option> を無視します。逆に cgroup1 だけが使われているシステム上の <option>lxc.cgroup2.</option> を無視します。
+        Since LXC 7.0, only the unified cgroup hierarchy (cgroup v2) is
+        supported. To alter settings for controllers in the unified hierarchy,
+        the <option>lxc.cgroup2.</option> key prefix must be used.
+        The <option>lxc.cgroup.</option> key prefix, which was used for
+        legacy and hybrid hierarchy configurations, is no longer supported.
+          -->
+        LXC 7.0 以降、cgroup v2（単一階層構造）のみがサポートされています。cgroup v2 のコントローラーの設定を変更するには、<option>lxc.cgroup2.</option> というプレフィックスを使う必要があります。cgroup v1（レガシー階層構造）や v1 と v2 のハイブリッドな構成で使われていた <option>lxc.cgroup.</option> というプレフィックスはサポートされなくなりました。
       </para>
 
       <para>
@@ -2108,67 +2101,44 @@
         cgroup 階層の本質は、プロセスを階層的に構造化する方法です。通常は、cgroup 階層では 1 つ以上の「コントローラー」が有効になっています。
         通常、cgroup 階層の「コントローラー」は階層に従って特定のタイプのシステムリソースを分配する役割を果たします。
         コントローラーには "pids" コントローラー、"cpu" コントローラー、"memory" コントローラーなどがあります。
-        しかし、システムリソースの分配するという役割に該当しないコントローラーもあります。このようなコントローラーは「ユーティリティー」コントローラーと呼ばれたりします。
+        しかし、システムリソースを分配するという役割に該当しないコントローラーもあります。このようなコントローラーは「ユーティリティー」コントローラーと呼ばれたりします。
         ユーティリティーコントローラーの 1 つにデバイスコントローラーがあります。このコントローラーはシステムリソースを分配する代わりにデバイスへのアクセスを管理できます。
       </para>
 
       <para>
         <!--
-        In the legacy hierarchy the device controller was implemented like most
-        other controllers as a set of files that could be written to. These
-        files where named "devices.allow" and "devices.deny". The legacy device
-        controller allowed the implementation of both "allowlists" and
-        "denylists".
-        -->
-        cgroup1 では、デバイスコントローラーは他の多くのコントローラーと同様に、書き込みできるファイルのセットとして実装されていました。
-        これらのファイルは "devices.allow" と "devices.deny" という名前のファイルでした。レガシーデバイスコントローラーは「許可リスト（allowlists）」と「拒否リスト（denylists）」の両方を実装できました。
+        LXC supports both "allowlist" and "denylist" semantics for device
+        access control. An allowlist blocks access to all devices by default,
+        and allow rules must be specified for particular devices or device
+        classes. A denylist allows access to all devices by default, and "deny
+        rules" must be specified to restrict access to particular devices or
+        device classes.
+          -->
+        LXC は、デバイスアクセスコントロールにおいて、「許可リスト（allowlist）」と「拒否リスト（denylist）」の両方をサポートしています。許可リストは、デフォルトですべてのデバイスへのアクセスをブロックし、特定のデバイスまたはデバイスクラスに対して「許可ルール（allow rules）」を指定する必要があります。拒否リストは、デフォルトですべてのデバイスへのアクセスを許可し、特定のデバイスまたはデバイスクラスへのアクセスを拒否するには「拒否ルール（deny rules）」を指定する必要があります。
       </para>
 
       <para>
         <!--
-        An allowlist is a device program that by default blocks access to all
-        devices. In order to access specific devices "allow rules" for
-        particular devices or device classes must be specified. In contrast, a
-        denylist is a device program that by default allows access to all
-        devices. In order to restrict access to specific devices "deny rules"
-        for particular devices or device classes must be specified.
+        In the unified cgroup hierarchy, the device controller is implemented
+        via an eBPF program of type
+        <option>BPF_PROG_TYPE_CGROUP_DEVICE</option> attached to a cgroup,
+        rather than the file-based interface used previously. LXC preserves
+        the same allowlist/denylist semantics in this eBPF-based device
+        controller. The following paragraphs explain these semantics in
+        detail.
         -->
-        許可リスト（allowlist）とは、すべてのデバイスへのアクセスをブロックするデバイスプログラムです。特定のデバイスへのアクセスを行うには、特定のデバイスもしくはデバイスクラスに対する「許可ルール（allow rules）」を指定する必要があります。
-        一方、拒否リスト（denylist）はデフォルトですべてのデバイスへのアクセスを許可するデバイスプログラムです。特定のデバイスへのアクセスを拒否するには、特定のデバイスもしくはデバイスクラスに対する「拒否ルール（deny rules）」を指定する必要があります。
+        cgroup v2 では、デバイスコントローラーは、以前使用されていたファイルベースのインターフェースではなく、cgroup にアタッチされたタイプ <option>BPF_PROG_TYPE_CGROUP_DEVICE</option> の eBPF プログラムを介して実装されています。LXC は、この eBPF ベースのデバイスコントローラーで、v1 のときと同じ許可リスト・拒否リストのセマンティクスを保持します。このあとの段落では、cgroup v2 の eBPF デバイスコントローラーに対するセマンティクスを説明します。
       </para>
 
       <para>
         <!--
-        In the unified cgroup hierarchy the implementation of the device
-        controller has completely changed. Instead of files to read from and
-        write to a eBPF program of
-        <option>BPF_PROG_TYPE_CGROUP_DEVICE</option> can be attached to a
-        cgroup. Even though the kernel implementation has changed completely
-        LXC tries to allow for the same semantics to be followed in the legacy
-        device cgroup and the unified eBPF-based device controller. The
-        following paragraphs explain the semantics for the unified eBPF-based
-        device controller.
+        Device rules for the cgroup2 eBPF-based device controller are
+        specified via <option>lxc.cgroup2.devices.allow</option> and
+        <option>lxc.cgroup2.devices.deny</option>.
         -->
-        cgroup2 では、デバイスコントローラーの実装が完全に変わりました。読み書きするファイルの代わりに、<option>BPF_PROG_TYPE_CGROUP_DEVICE</option> の eBPF プログラムを cgroup にアタッチできます。
-        カーネルの実装が完全に変わったのにもかかわらず、LXC は cgroup1 のデバイスコントローラーと cgroup2 の eBPF ベースのデバイスコントローラーで同じセマンティクスに従えるようにしています。
-        このあとの段落では、cgroup2 の eBPF デバイスコントローラーに対するセマンティクスを説明します。
+        cgroup v2 の eBPF ベースのデバイスコントローラーのデバイスルールは、<option>lxc.cgroup2.devices.allow</option> と <option>lxc.cgroup2.devices.deny</option> を使って指定します。
       </para>
 
-      <para>
-        <!--
-        As mentioned the format for specifying device rules for the unified
-        eBPF-based device controller is the same as for the legacy cgroup
-        device controller; only the configuration key prefix has changed.
-        Specifically, device rules for the legacy cgroup device controller are
-        specified via <option>lxc.cgroup.devices.allow</option> and
-        <option>lxc.cgroup.devices.deny</option> whereas for the
-        cgroup2 eBPF-based device controller
-        <option>lxc.cgroup2.devices.allow</option> and
-        <option>lxc.cgroup2.devices.deny</option> must be used.
-        -->
-        先に述べたように、cgroup2 の eBPF ベースのデバイスコントローラーに対するデバイスルールを指定するフォーマットは、cgroup1 のデバイスコントローラーと同じです。ただし、設定キーのプレフィックスは変更されています。
-        具体的には、cgroup1 のデバイスコントローラーに対するデバイスルールは <option>lxc.cgroup.devices.allow</option> と <option>lxc.cgroup.devices.deny</option> を使って指定します。一方、cgroup2 の eBPF ベースのコントローラーでは <option>lxc.cgroup2.devices.allow</option> と <option>lxc.cgroup2.devices.deny</option> を使わなければなりません。
-      </para>
       <para>
         <itemizedlist>
           <listitem>
@@ -2376,22 +2346,16 @@
           </term>
           <listitem>
             <para>
-              <!--
-              specify a directory or path in which the container's cgroup will
+	      <!--
+	      specify a directory or path in which the container's cgroup will
               be created. For example, setting
               <option>lxc.cgroup.dir = my-cgroup/first</option> for a container
-              named "c1" will create the container's cgroup as a sub-cgroup of
-              "my-cgroup". For example, if the user's current cgroup "my-user"
-              is located in the root cgroup of the cpuset controllerin in a
-              cgroup v1 hierarchy this would create the cgroup
-              "/sys/fs/cgroup/cpuset/my-user/my-cgroup/first/c1" for the
-              container. Any missing cgroups will be created by LXC. This
-              presupposes that the user has write access to its current cgroup.
-              -->
-              コンテナの cgroup を作成するパスやディレクトリを指定します。
-              例えば、"c1" という名前のコンテナで <option>lxc.cgroup.dir = my-cgroup/first</option> のように設定すると、"my-cgroup" のサブ cgroup のようにコンテナの cgroup を作成します。
-              例えば、ユーザのカレントの cgroup である "my-user" が cgroup v1 階層にある cpuset コントローラの root cgroup 内に存在する場合、この設定は "/sys/fs/cgroup/cpuset/my-user/my-cgroup/first/c1" という cgroup をこのコンテナ向けに作成します。
-              存在しない cgroup は LXC が作成しますが、ユーザがカレントの cgroup に書き込み権を持っていることが前提となります。
+              named "c1", if the user's current cgroup is "my-user", will
+              create the container's cgroups under "my-user/my-cgroup/first".
+              Any missing cgroups will be created by LXC. This presupposes
+              that the user has write access to its current cgroup.
+	      -->
+	      コンテナの cgroup を作成するパスやディレクトリを指定します。例えば、"c1" という名前のコンテナで <option>lxc.cgroup.dir = my-cgroup/first</option> のように設定すると、ユーザのカレント cgroup が "my-user" の場合、コンテナの cgroup は "my-user/my-cgroup/first" の下に作成されます。存在しない cgroup は LXC が作成しますが、ユーザーがカレントの cgroup に書き込み権を持っていることが前提となります。
             </para>
           </listitem>
         </varlistentry>
@@ -4139,11 +4103,11 @@
         devices.allow は、特定のデバイスを使用可能にします。
       </para>
       <programlisting>
-        lxc.cgroup.cpuset.cpus = 0,1
-        lxc.cgroup.cpu.shares = 1234
-        lxc.cgroup.devices.deny = a
-        lxc.cgroup.devices.allow = c 1:3 rw
-        lxc.cgroup.devices.allow = b 8:0 rw
+        lxc.cgroup2.cpuset.cpus = 0,1
+        lxc.cgroup2.cpu.shares = 1234
+        lxc.cgroup2.devices.deny = a
+        lxc.cgroup2.devices.allow = c 1:3 rw
+        lxc.cgroup2.devices.allow = b 8:0 rw
       </programlisting>
     </refsect2>
 
@@ -4177,11 +4141,11 @@
         lxc.net.2.hwaddr = 4a:49:43:49:79:ff
         lxc.net.2.ipv4.address = 10.2.3.6/24
         lxc.net.2.ipv6.address = 2003:db8:1:0:214:1234:fe0b:3297
-        lxc.cgroup.cpuset.cpus = 0,1
-        lxc.cgroup.cpu.shares = 1234
-        lxc.cgroup.devices.deny = a
-        lxc.cgroup.devices.allow = c 1:3 rw
-        lxc.cgroup.devices.allow = b 8:0 rw
+        lxc.cgroup2.cpuset.cpus = 0,1
+        lxc.cgroup2.cpu.shares = 1234
+        lxc.cgroup2.devices.deny = a
+        lxc.cgroup2.devices.allow = c 1:3 rw
+        lxc.cgroup2.devices.allow = b 8:0 rw
         lxc.mount.fstab = /etc/fstab.complex
         lxc.mount.entry = /lib /root/myrootfs/lib none ro,bind 0 0
         lxc.rootfs.path = dir:/mnt/rootfs.complex

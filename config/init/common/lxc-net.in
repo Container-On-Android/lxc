@@ -9,6 +9,7 @@ varlib="@LOCALSTATEDIR@/lib"
 
 LXC_BRIDGE="lxcbr0"
 LXC_BRIDGE_MAC="10:66:6a:00:00:00"
+LXC_BRIDGE_MTU="1500"
 LXC_ADDR="10.0.3.1"
 LXC_NETMASK="255.255.255.0"
 LXC_NETWORK="10.0.3.0/24"
@@ -63,6 +64,7 @@ _ifup() {
     CIDR_ADDR="${LXC_ADDR}/${MASK}"
     ip addr add ${CIDR_ADDR} broadcast + dev ${LXC_BRIDGE}
     ip link set dev ${LXC_BRIDGE} address $LXC_BRIDGE_MAC
+    ip link set dev ${LXC_BRIDGE} mtu ${LXC_BRIDGE_MTU:-1500}
     ip link set dev ${LXC_BRIDGE} up
 }
 

@@ -1028,8 +1028,19 @@ static int lxc_cmd_get_config_item_callback(int fd, struct lxc_cmd_req *req,
 	int cilen;
 	struct lxc_config_t *item;
 	struct lxc_cmd_rsp rsp;
+	ssize_t ret;
 
 	memset(&rsp, 0, sizeof(rsp));
+
+	if (req->datalen <= 0) {
+		rsp.ret = -EINVAL;
+		return lxc_cmd_rsp_send_reap(fd, &rsp);
+	}
+
+	ret = validate_string_request(fd, req);
+	if (ret != 0)
+		return ret;
+
 	item = lxc_get_config(req->data);
 	cilen = item->get(req->data, NULL, 0, handler->conf, NULL);
 	if (cilen <= 0)
@@ -1554,6 +1565,12 @@ static int lxc_cmd_console_log_callback(int fd, struct lxc_cmd_req *req,
 	rsp.ret = -EFAULT;
 	rsp.datalen = 0;
 	rsp.data = NULL;
+
+	if (req->datalen != sizeof(struct lxc_cmd_console_log) || !req->data) {
+		rsp.ret = -EINVAL;
+		goto out;
+	}
+
 	if (buffer_size <= 0)
 		goto out;
 

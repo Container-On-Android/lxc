@@ -1368,8 +1368,21 @@ __noreturn static void do_attach(struct attach_payload *ap)
 		lxc_seccomp_close_notifier_fd(&conf->seccomp);
 	}
 
-	if (!lxc_switch_uid_gid(ctx->target_ns_uid, ctx->target_ns_gid))
-		goto on_error;
+	if (conf->nonroot_keepcaps) {
+		ret = lxc_set_keepcaps();
+		if (ret < 0)
+			goto on_error;
+
+		if (!lxc_switch_uid_gid(ctx->target_ns_uid, ctx->target_ns_gid))
+			goto on_error;
+
+		ret = lxc_bounding_as_ambient_caps();
+		if (ret < 0)
+			goto on_error;
+	} else {
+		if (!lxc_switch_uid_gid(ctx->target_ns_uid, ctx->target_ns_gid))
+			goto on_error;
+	}
 
 	put_attach_payload(ap);
 

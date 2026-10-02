@@ -92,6 +92,7 @@ lxc_config_define(init_cmd);
 lxc_config_define(init_cwd);
 lxc_config_define(init_gid);
 lxc_config_define(init_uid);
+lxc_config_define(nonroot_keepcaps);
 lxc_config_define(init_groups);
 lxc_config_define(jump_table_net);
 lxc_config_define(keyring_session);
@@ -235,6 +236,7 @@ static struct lxc_config_t config_jump_table[] = {
 	{ "lxc.init.gid",                   true,  set_config_init_gid,                   get_config_init_gid,                   clr_config_init_gid,                   },
 	{ "lxc.init.groups",                true,  set_config_init_groups,                get_config_init_groups,                clr_config_init_groups,                },
 	{ "lxc.init.uid",                   true,  set_config_init_uid,                   get_config_init_uid,                   clr_config_init_uid,                   },
+	{ "lxc.cap.nonroot",                true,  set_config_nonroot_keepcaps,           get_config_nonroot_keepcaps,           clr_config_nonroot_keepcaps,           },
 	{ "lxc.init.cwd",                   true,  set_config_init_cwd,                   get_config_init_cwd,                   clr_config_init_cwd,                   },
 	{ "lxc.keyring.session",            true,  set_config_keyring_session,            get_config_keyring_session,            clr_config_keyring_session             },
 	{ "lxc.log.file",                   true,  set_config_log_file,                   get_config_log_file,                   clr_config_log_file,                   },
@@ -1285,6 +1287,12 @@ static int set_config_init_uid(const char *key, const char *value,
 	lxc_conf->init_uid = init_uid;
 
 	return 0;
+}
+
+static int set_config_nonroot_keepcaps(const char *key, const char *value,
+			       struct lxc_conf *lxc_conf, void *data)
+{
+	return set_config_bool_item(&lxc_conf->nonroot_keepcaps, value, false);
 }
 
 static int set_config_init_gid(const char *key, const char *value,
@@ -2675,7 +2683,7 @@ static int set_config_console_size(const char *key, const char *value,
  * lxc.include.
  * 'x' and 'X' are substituted in-place.
  */
-static void update_hwaddr(const char *line)
+static void update_hwaddr(char *line)
 {
 	char *p;
 
@@ -2701,7 +2709,7 @@ static void update_hwaddr(const char *line)
 	rand_complete_hwaddr(p);
 }
 
-int append_unexp_config_line(const char *line, struct lxc_conf *conf)
+int append_unexp_config_line(char *line, struct lxc_conf *conf)
 {
 	size_t linelen;
 	size_t len = conf->unexpanded_len;
@@ -4213,7 +4221,7 @@ static int get_config_uts_name(const char *key, char *retv, int inlen,
 static int get_config_hooks(const char *key, char *retv, int inlen,
 			    struct lxc_conf *c, void *data)
 {
-	char *subkey;
+	const char *subkey;
 	int len, fulllen = 0, found = -1;
 	struct string_entry *entry;
 	int i;
@@ -4533,6 +4541,12 @@ static int get_config_init_uid(const char *key, char *retv, int inlen,
 			       struct lxc_conf *c, void *data)
 {
 	return lxc_get_conf_int(c, retv, inlen, c->init_uid);
+}
+
+static int get_config_nonroot_keepcaps(const char *key, char *retv, int inlen,
+			       struct lxc_conf *c, void *data)
+{
+	return lxc_get_conf_bool(c, retv, inlen, c->nonroot_keepcaps);
 }
 
 static int get_config_init_gid(const char *key, char *retv, int inlen,
@@ -5265,6 +5279,13 @@ static inline int clr_config_init_uid(const char *key, struct lxc_conf *c,
 				      void *data)
 {
 	c->init_uid = 0;
+	return 0;
+}
+
+static inline int clr_config_nonroot_keepcaps(const char *key, struct lxc_conf *c,
+				      void *data)
+{
+	c->nonroot_keepcaps = false;
 	return 0;
 }
 

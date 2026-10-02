@@ -1634,19 +1634,35 @@ static int do_start(void *data)
 			goto out_warn_father;
 	}
 
-	if (!lxc_switch_uid_gid(new_uid, new_gid))
-		goto out_warn_father;
+	if (handler->conf->nonroot_keepcaps) {
+		NOTICE("Keep capabilities");
+		ret = lxc_set_keepcaps();
+		if (ret < 0)
+			goto out_warn_father;
+
+		if (!lxc_switch_uid_gid(new_uid, new_gid))
+			goto out_warn_father;
+
+		ret = lxc_bounding_as_ambient_caps();
+		if (ret < 0) {
+			ERROR("Failed to set bounding capabilities as ambiant");
+			goto out_warn_father;
+		}
+	} else {
+		if (!lxc_switch_uid_gid(new_uid, new_gid))
+			goto out_warn_father;
+
+		ret = lxc_ambient_caps_down();
+		if (ret < 0) {
+			ERROR("Failed to clear ambient capabilities");
+			goto out_warn_father;
+		}
+	}
 
 	ret = prctl(PR_SET_DUMPABLE, prctl_arg(1), prctl_arg(0),
 		    prctl_arg(0), prctl_arg(0));
 	if (ret < 0)
 		goto out_warn_father;
-
-	ret = lxc_ambient_caps_down();
-	if (ret < 0) {
-		ERROR("Failed to clear ambient capabilities");
-		goto out_warn_father;
-	}
 
 	if (handler->conf->monitor_signal_pdeath != SIGKILL) {
 		ret = lxc_set_death_signal(handler->conf->monitor_signal_pdeath,
